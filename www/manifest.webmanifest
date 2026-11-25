@@ -1,0 +1,17 @@
+{
+  "name": "Chung Ví — Sổ chi tiêu đôi ta",
+  "short_name": "Chung Ví",
+  "description": "Quản lý chi tiêu cá nhân, quỹ chung và kế hoạch đám cưới cho các cặp đôi.",
+  "lang": "vi",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#f6f5f8",
+  "theme_color": "#d9466f",
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

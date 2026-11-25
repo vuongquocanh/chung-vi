@@ -1,0 +1,12 @@
+node_modules/
+ios/
+android/
+www/vendor/
+build/
+*.ipa
+*.p8
+*.pem
+cert_key*
+.DS_Store
+Thumbs.db
+.claude/settings.local.json

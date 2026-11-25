@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Chung Ví</title>
+  <meta name="description" content="Quản lý chi tiêu cá nhân, quỹ chung và kế hoạch đám cưới cho các cặp đôi.">
+  <meta name="theme-color" content="#d9466f">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Chung Ví">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" type="image/png" href="icons/icon-192.png">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js" defer></script>
+  <script src="js/app.js" defer></script>
+  <script src="js/cloud.js" type="module"></script>
+</head>
+<body>
+  <div class="app">
+    <aside class="sidebar">
+      <div class="brand">
+        <span class="brand-logo">💍</span>
+        <div>
+          <div class="brand-name">Chung Ví</div>
+          <div class="brand-sub" id="brandSub">Sổ chi tiêu đôi ta</div>
+        </div>
+      </div>
+      <nav class="nav" id="nav">
+        <button data-view="dashboard"><span class="ni">📊</span><span class="nl">Tổng quan</span></button>
+        <button data-view="transactions"><span class="ni">🧾</span><span class="nl">Giao dịch</span></button>
+        <button data-view="budget"><span class="ni">🎯</span><span class="nl">Ngân sách</span></button>
+        <button data-view="goals"><span class="ni">🐷</span><span class="nl">Tiết kiệm</span></button>
+        <button data-view="wedding" id="navWedding"><span class="ni">💒</span><span class="nl">Đám cưới</span></button>
+        <button data-view="settings"><span class="ni">⚙️</span><span class="nl">Cài đặt</span></button>
+      </nav>
+      <div class="sidebar-foot" id="sidebarFoot"></div>
+    </aside>
+
+    <main class="main">
+      <header class="topbar">
+        <div>
+          <h1 id="viewTitle">Tổng quan</h1>
+          <div class="muted small" id="viewSub"></div>
+        </div>
+        <div class="topbar-actions">
+          <button class="sync-badge hidden" id="syncBadge" data-view-link="settings" title="Trạng thái đồng bộ"></button>
+          <div class="month-switch" id="monthSwitch">
+            <button class="icon-btn" data-action="month-prev" aria-label="Tháng trước">‹</button>
+            <span id="monthLabel"></span>
+            <button class="icon-btn" data-action="month-next" aria-label="Tháng sau">›</button>
+          </div>
+          <button class="icon-btn" data-action="toggle-theme" id="themeBtn" aria-label="Đổi giao diện">🌓</button>
+          <button class="btn primary" data-action="add-tx">＋ <span class="hide-sm">Thêm giao dịch</span></button>
+        </div>
+      </header>
+      <section id="view" class="view"></section>
+    </main>
+  </div>
+
+  <dialog id="modal">
+    <form id="modalForm" novalidate>
+      <div class="modal-head">
+        <h2 id="modalTitle"></h2>
+        <button type="button" class="icon-btn" data-action="close-modal" aria-label="Đóng">✕</button>
+      </div>
+      <div id="modalBody" class="modal-body"></div>
+      <div class="modal-foot">
+        <button type="button" class="btn ghost" data-action="close-modal">Hủy</button>
+        <button type="submit" class="btn primary" id="modalSubmit">Lưu</button>
+      </div>
+    </form>
+  </dialog>
+
+  <input type="file" id="importFile" accept="application/json,.json" hidden>
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+</body>
+</html>

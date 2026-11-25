@@ -1,0 +1,21 @@
+{
+  "name": "chung-vi",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Chung Ví — quản lý chi tiêu cá nhân & cặp đôi sắp cưới (web/PWA + iOS)",
+  "scripts": {
+    "serve": "python -m http.server 5173 --directory www",
+    "vendor": "node -e \"require('fs').mkdirSync('www/vendor',{recursive:true});require('fs').copyFileSync('node_modules/chart.js/dist/chart.umd.js','www/vendor/chart.umd.js')\"",
+    "ios:add": "cap add ios",
+    "ios:sync": "npm run vendor && cap sync ios",
+    "ios:open": "cap open ios"
+  },
+  "dependencies": {
+    "@capacitor/core": "^7.0.0",
+    "@capacitor/ios": "^7.0.0",
+    "chart.js": "4.4.1"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "^7.0.0"
+  }
+}

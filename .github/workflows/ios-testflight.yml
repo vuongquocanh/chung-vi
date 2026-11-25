@@ -1,0 +1,114 @@
+# Build app iOS Chung Ví trên máy Mac của GitHub và tải lên TestFlight.
+# KHÔNG cần máy Mac. Cần: tài khoản Apple Developer + các secrets bên dưới (xem DEPLOY.md, phần C).
+#
+# Chạy: GitHub → Actions → "iOS → TestFlight" → Run workflow (nhập phiên bản),
+#       hoặc push tag dạng v1.0.0
+#
+# Secrets (Settings → Secrets and variables → Actions → Secrets):
+#   APP_STORE_CONNECT_ISSUER_ID       — Issuer ID của API key App Store Connect
+#   APP_STORE_CONNECT_KEY_IDENTIFIER  — Key ID
+#   APP_STORE_CONNECT_PRIVATE_KEY     — nội dung file AuthKey_XXXX.p8
+#   CERTIFICATE_PRIVATE_KEY           — khoá RSA dùng để tạo/tái sử dụng chứng chỉ phân phối
+# Variables (tab Variables):
+#   BUNDLE_ID                         — VD: com.tenban.chungvi (phải trùng app đã tạo trên App Store Connect)
+name: iOS → TestFlight
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Phiên bản hiển thị (VD 1.0.0)'
+        required: true
+        default: '1.0.0'
+  push:
+    tags: ['v*']
+
+jobs:
+  testflight:
+    runs-on: macos-15
+    timeout-minutes: 45
+    env:
+      APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
+      APP_STORE_CONNECT_KEY_IDENTIFIER: ${{ secrets.APP_STORE_CONNECT_KEY_IDENTIFIER }}
+      APP_STORE_CONNECT_PRIVATE_KEY: ${{ secrets.APP_STORE_CONNECT_PRIVATE_KEY }}
+      CERTIFICATE_PRIVATE_KEY: ${{ secrets.CERTIFICATE_PRIVATE_KEY }}
+      BUNDLE_ID: ${{ vars.BUNDLE_ID }}
+      BUILD_NUMBER: ${{ github.run_number }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Kiểm tra cấu hình
+        run: |
+          missing=0
+          for v in APP_STORE_CONNECT_ISSUER_ID APP_STORE_CONNECT_KEY_IDENTIFIER APP_STORE_CONNECT_PRIVATE_KEY CERTIFICATE_PRIVATE_KEY BUNDLE_ID; do
+            if [ -z "${!v}" ]; then echo "::error::Thiếu $v — xem DEPLOY.md phần C"; missing=1; fi
+          done
+          exit $missing
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Cài công cụ
+        run: |
+          pip install codemagic-cli-tools
+          npm install --no-audit --no-fund
+
+      - name: Chuẩn bị web cho app (Chart.js nội bộ để chạy offline)
+        run: |
+          jq --arg id "$BUNDLE_ID" '.appId = $id' capacitor.config.json > cap.tmp && mv cap.tmp capacitor.config.json
+          npm run vendor
+          sed -i '' 's#https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js#vendor/chart.umd.js#' www/index.html
+          grep -q 'vendor/chart.umd.js' www/index.html
+
+      - name: Tạo project iOS (Capacitor)
+        run: npx cap add ios
+
+      - name: Icon, phiên bản, Info.plist
+        run: |
+          VERSION="${{ github.event.inputs.version }}"
+          if [ -z "$VERSION" ]; then VERSION="${GITHUB_REF_NAME#v}"; fi
+          echo "Phiên bản $VERSION (build $BUILD_NUMBER)"
+
+          ICONSET=ios/App/App/Assets.xcassets/AppIcon.appiconset
+          for f in "$ICONSET"/*.png; do
+            s=$(sips -g pixelWidth "$f" | awk '/pixelWidth/{print $2}')
+            sips -s format png -z "$s" "$s" assets/icon-1024.png --out "$f" > /dev/null
+          done
+
+          PBX=ios/App/App.xcodeproj/project.pbxproj
+          sed -i '' -E "s/MARKETING_VERSION = [^;]+;/MARKETING_VERSION = $VERSION;/g; s/CURRENT_PROJECT_VERSION = [^;]+;/CURRENT_PROJECT_VERSION = $BUILD_NUMBER;/g" "$PBX"
+
+          PLIST=ios/App/App/Info.plist
+          /usr/libexec/PlistBuddy -c "Delete :ITSAppUsesNonExemptEncryption" "$PLIST" 2>/dev/null || true
+          /usr/libexec/PlistBuddy -c "Add :ITSAppUsesNonExemptEncryption bool false" "$PLIST"
+
+          npx cap sync ios
+
+      - name: Ký ứng dụng (tự tạo/tái sử dụng chứng chỉ & profile)
+        run: |
+          keychain initialize
+          app-store-connect fetch-signing-files "$BUNDLE_ID" --type IOS_APP_STORE --create --certificate-key=@env:CERTIFICATE_PRIVATE_KEY
+          keychain add-certificates
+          xcode-project use-profiles
+
+      - name: Build IPA
+        run: |
+          if [ -d ios/App/App.xcworkspace ]; then
+            xcode-project build-ipa --workspace ios/App/App.xcworkspace --scheme App
+          else
+            xcode-project build-ipa --project ios/App/App.xcodeproj --scheme App
+          fi
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ChungVi-ipa-${{ github.run_number }}
+          path: build/ios/ipa/*.ipa
+          retention-days: 14
+
+      - name: Tải lên TestFlight
+        run: app-store-connect publish --path "build/ios/ipa/*.ipa"
