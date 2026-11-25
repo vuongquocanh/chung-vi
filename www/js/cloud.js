@@ -245,18 +245,17 @@ async function run(fn) {
 const creds = () => ({ email: ($('#cloudEmail')?.value || '').trim(), pass: $('#cloudPass')?.value || '' });
 
 const ACTIONS = {
-  signin: () => run(async () => { const { email, pass } = creds(); await fb.signInWithEmailAndPassword(auth, email, pass); app.toast('Đã đăng nhập'); }),
-  signup: () => run(async () => {
-    const { email, pass } = creds();
+  // Lưu ý: đọc ô nhập TRƯỚC khi gọi run(), vì run() vẽ lại thẻ (ô nhập sẽ bị làm mới)
+  signin: () => { const { email, pass } = creds(); run(async () => { await fb.signInWithEmailAndPassword(auth, email, pass); app.toast('Đã đăng nhập'); }); },
+  signup: () => { const { email, pass } = creds(); run(async () => {
     if (!confirm('Tạo tài khoản mới và chuyển dữ liệu đang có trên máy này lên đám mây?')) return;
     await fb.createUserWithEmailAndPassword(auth, email, pass);
-  }),
-  reset: () => run(async () => {
-    const { email } = creds();
+  }); },
+  reset: () => { const { email } = creds(); run(async () => {
     if (!email) throw new Error('Nhập email trước rồi bấm Quên mật khẩu');
     await fb.sendPasswordResetEmail(auth, email);
-    app.toast('Đã gửi email đặt lại mật khẩu');
-  }),
+    app.toast('Đã gửi email đặt lại mật khẩu (kiểm tra cả mục Spam)');
+  }); },
   signout: () => run(async () => {
     if (!confirm('Đăng xuất? Dữ liệu vẫn còn trên đám mây; máy này giữ một bản sao để xem offline.')) return;
     await fb.signOut(auth); app.setUi({ cloudUid: null, unsynced: false });
@@ -265,8 +264,7 @@ const ACTIONS = {
     const text = `Mã mời Chung Ví của mình: ${inviteCode}\nVào Cài đặt → Đồng bộ đám mây → Tham gia sổ chung và nhập mã này nhé!`;
     (navigator.clipboard ? navigator.clipboard.writeText(text) : Promise.reject()).then(() => app.toast('Đã sao chép mã mời'), () => prompt('Sao chép mã mời:', inviteCode));
   },
-  join: () => run(async () => {
-    const code = ($('#cloudJoin')?.value || '').trim().toUpperCase().replace(/\s/g, '');
+  join: () => { const code = ($('#cloudJoin')?.value || '').trim().toUpperCase().replace(/\s/g, ''); run(async () => {
     if (code.length < 6) throw new Error('Mã mời gồm 8 ký tự');
     if (code === inviteCode) throw new Error('Đây là mã của chính sổ bạn đang dùng');
     if (!confirm('Tham gia sổ của người ấy? Dữ liệu trong sổ hiện tại của bạn sẽ không còn hiển thị trên máy này.')) return;
@@ -279,7 +277,7 @@ const ACTIONS = {
     app.setUi({ unsynced: false, me: 'p2' });
     setStatus('connecting'); subscribe();
     app.toast('💞 Đã tham gia sổ chung!');
-  }),
+  }); },
 };
 
 document.addEventListener('click', e => {

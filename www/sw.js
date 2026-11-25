@@ -1,5 +1,5 @@
 /* Chung Ví — service worker: cho phép mở app khi không có mạng. */
-const CACHE = 'chungvi-v2';
+const CACHE = 'chungvi-v3';
 const SHELL = ['./', 'index.html', 'css/style.css', 'js/app.js', 'js/cloud.js', 'js/firebase-config.js', 'manifest.webmanifest', 'icons/icon-192.png', 'icons/icon-512.png'];
 // Thư viện bên ngoài: lấy từ cache trước (phiên bản cố định, không đổi)
 const CDN_HOSTS = ['cdnjs.cloudflare.com', 'fonts.googleapis.com', 'fonts.gstatic.com', 'www.gstatic.com'];
