@@ -35,7 +35,7 @@ jobs:
       BUNDLE_ID: ${{ vars.BUNDLE_ID }}
       BUILD_NUMBER: ${{ github.run_number }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Kiểm tra cấu hình
         run: |
@@ -45,11 +45,11 @@ jobs:
           done
           exit $missing
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
           node-version: 20
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: '3.12'
 
@@ -104,7 +104,7 @@ jobs:
             xcode-project build-ipa --project ios/App/App.xcodeproj --scheme App
           fi
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v5
         with:
           name: ChungVi-ipa-${{ github.run_number }}
           path: build/ios/ipa/*.ipa
