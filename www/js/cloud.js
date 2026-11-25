@@ -20,6 +20,7 @@ const configured = !!(config && config.apiKey && config.projectId);
 
 let fb = null, auth = null, db = null;
 let user = null, hid = null, inviteCode = null, memberCount = 0;
+let ownerUid = null, ownerEmail = '';  // chủ sổ = người tạo sổ
 let unsubs = [];
 let status = configured ? 'loading' : 'off'; // off | loading | signed-out | connecting | synced | pending | offline | error
 let statusMsg = '';
@@ -110,6 +111,7 @@ async function init() {
 function stop() {
   unsubs.forEach(u => u()); unsubs = [];
   ready = gotMain = gotTx = false; lastKeys = {}; remoteTx = new Map(); lastTx = new Map(); inviteCode = null;
+  ownerUid = null; ownerEmail = '';
 }
 
 async function onUser(u) {
@@ -136,7 +138,7 @@ async function createHousehold() {
   const S = app.state;
   hid = fb.doc(fb.collection(db, 'households')).id;
   const code = randomCode();
-  const data = { members: [user.uid], owner: user.uid, inviteCode: code, createdAt: fb.serverTimestamp() };
+  const data = { members: [user.uid], owner: user.uid, ownerEmail: user.email || '', inviteCode: code, createdAt: fb.serverTimestamp() };
   DOC_KEYS.forEach(k => { data[k] = pick(S, k); });
   const batch = fb.writeBatch(db);
   batch.set(hRef(), data);
@@ -156,6 +158,11 @@ function subscribe() {
     if (!snap.exists()) return;
     const d = snap.data();
     inviteCode = d.inviteCode; memberCount = (d.members || []).length;
+    const roleChanged = ownerUid !== d.owner;
+    ownerUid = d.owner; ownerEmail = d.ownerEmail || '';
+    // sổ tạo trước khi có trường ownerEmail → chủ sổ tự bổ sung
+    if (ownerUid === user.uid && !d.ownerEmail && user.email) fb.updateDoc(hRef(), { ownerEmail: user.email }).catch(onErr);
+    if (roleChanged && ready) app.render();
     const patch = {};
     DOC_KEYS.forEach(k => {
       if (d[k] === undefined) return;
@@ -323,6 +330,8 @@ function renderCard() {
   el.innerHTML = head + `<div class="grid grid-2e">
       <div><div class="small">Đang đăng nhập: <b>${esc(user.email)}</b></div>
         <div class="small muted">${memberCount > 1 ? `💞 Sổ chung của ${memberCount} người` : 'Sổ riêng (chưa có ai tham gia)'}</div>
+        ${ready ? `<div class="small" style="margin-top:4px">${ownerUid === user.uid ? '<span class="badge rose">👑 Chủ sổ</span>'
+          : `<span class="badge blue">Thành viên</span> <span class="muted">· chủ sổ: ${esc(ownerEmail || 'người tạo sổ')}</span>`}</div>` : ''}
         ${statusMsg && status === 'error' ? `<div class="small neg">${esc(statusMsg)}</div>` : ''}
         <div class="btn-row" style="margin-top:12px"><button class="btn" data-cloud="signout" ${dis}>Đăng xuất</button></div></div>
       ${couple ? `<div>
@@ -338,6 +347,9 @@ function renderCard() {
 window.chungviCloud = {
   isReady: () => ready,
   isSignedIn: () => !!user,
+  /** Chủ sổ = người tạo sổ. Chỉ biết chắc khi đã nhận dữ liệu từ đám mây. */
+  isOwner: () => !!user && ready && ownerUid === user.uid,
+  ownerEmail: () => ownerEmail,
   push: () => doPush(),
   renderCard,
 };

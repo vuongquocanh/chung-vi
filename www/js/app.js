@@ -304,7 +304,7 @@ function viewDashboard() {
     h += `<div class="hero"><div><h2>Chào mừng đến với Chung Ví 👋</h2>
       <div class="muted">Bắt đầu bằng cách thêm giao dịch đầu tiên, hoặc tải dữ liệu mẫu để xem thử.</div></div>
       <div class="btn-row"><button class="btn primary" data-action="add-tx">＋ Thêm giao dịch</button>
-      <button class="btn" data-action="load-sample">Tải dữ liệu mẫu</button></div></div>`;
+      ${canManageData() ? '<button class="btn" data-action="load-sample">Tải dữ liệu mẫu</button>' : ''}</div></div>`;
   }
 
   if (isCouple() && S.wedding.date) h += weddingBanner();
@@ -419,7 +419,7 @@ function viewTransactions() {
       <select class="input" data-filter="cat">${opt('', 'Mọi danh mục', f.cat)}${S.categories.map(c => opt(c.id, `${c.icon} ${c.name}`, f.cat)).join('')}</select>
       ${isCouple() ? `<select class="input" data-filter="person">${opt('', 'Cả hai người', f.person)}${opt('p1', P('p1'), f.person)}${opt('p2', P('p2'), f.person)}${opt('shared', 'Chỉ khoản chia đôi', f.person)}</select>` : ''}
       <label class="check"><input type="checkbox" data-filter="all" ${f.all ? 'checked' : ''}> Mọi tháng</label>
-      <button class="btn sm" data-action="export-csv">⬇ Xuất CSV</button>
+      ${canManageData() ? '<button class="btn sm" data-action="export-csv">⬇ Xuất CSV</button>' : ''}
     </div></div>
     <div class="card" id="txList">${txListHTML()}</div>`;
 }
@@ -867,11 +867,15 @@ function viewSettings() {
         <div class="full"><button class="btn primary" type="submit">Lưu hồ sơ</button></div></form></div>
     <div class="card"><div class="card-head"><h3>🎨 Giao diện</h3></div>
       <div class="seg">${[['auto', '🖥 Theo hệ thống'], ['light', '☀️ Sáng'], ['dark', '🌙 Tối']].map(([k, l]) => `<label><input type="radio" name="theme" data-theme-pick value="${k}" ${s.theme === k ? 'checked' : ''}><span>${l}</span></label>`).join('')}</div>
-      <div class="card-head" style="margin-top:22px"><h3>💾 Dữ liệu</h3></div>
-      <p class="muted small" style="margin-top:0">Dữ liệu chỉ lưu trên trình duyệt này. Hãy xuất file sao lưu định kỳ hoặc để chuyển sang máy khác.</p>
+      <div class="card-head" style="margin-top:22px"><h3>💾 Dữ liệu</h3>${cloudOn() && canManageData() ? '<span class="badge rose">👑 Chỉ chủ sổ</span>' : ''}</div>
+      ${canManageData() ? `<p class="muted small" style="margin-top:0">${cloudOn()
+          ? 'Dữ liệu được lưu trên đám mây và đồng bộ cho mọi thành viên. Chỉ bạn (chủ sổ) mới dùng được các thao tác dưới đây.'
+          : 'Dữ liệu chỉ lưu trên trình duyệt này. Hãy xuất file sao lưu định kỳ hoặc để chuyển sang máy khác.'}</p>
       <div class="btn-row"><button class="btn" data-action="export-json">⬇ Sao lưu (JSON)</button><button class="btn" data-action="import-json">⬆ Khôi phục</button>
         <button class="btn" data-action="export-csv">⬇ Giao dịch (CSV)</button><button class="btn" data-action="load-sample">🧪 Dữ liệu mẫu</button>
-        <button class="btn danger" data-action="reset">🗑 Xóa toàn bộ</button></div></div>
+        <button class="btn danger" data-action="reset">🗑 Xóa toàn bộ</button></div>`
+      : `<p class="muted small" style="margin:0">🔒 Sao lưu, khôi phục, xuất CSV, nạp dữ liệu mẫu và xóa toàn bộ chỉ dành cho <b>chủ sổ</b>${ownerEmailText()}.
+         Bạn vẫn thêm, sửa, xóa từng khoản chi tiêu bình thường.</p>`}</div>
   </div>
   <div class="card"><div class="card-head"><h3>🏷 Danh mục</h3><button class="btn sm primary" data-action="add-cat">＋ Thêm danh mục</button></div>
     <div class="lbl" style="margin-bottom:8px">Khoản chi</div><div>${cats('expense')}</div>
@@ -924,6 +928,13 @@ function onboarding() {
 
 /* ---------- Sample data ---------- */
 const cloudOn = () => !!(window.chungviCloud && window.chungviCloud.isSignedIn());
+/** Sao lưu/khôi phục/CSV/dữ liệu mẫu/xóa toàn bộ: chỉ chủ sổ (khi chưa đăng nhập đám mây thì máy này toàn quyền). */
+const canManageData = () => !cloudOn() || window.chungviCloud.isOwner();
+const ownerEmailText = () => { const e = cloudOn() && window.chungviCloud.ownerEmail(); return e ? ` (${esc(e)})` : ''; };
+const ownerOnly = fn => (...args) => {
+  if (!canManageData()) return toast('🔒 Chỉ chủ sổ mới dùng được chức năng này');
+  return fn(...args);
+};
 function loadSample() {
   const warn = cloudOn() ? 'Dữ liệu mẫu sẽ THAY THẾ toàn bộ dữ liệu, KỂ CẢ trên đám mây (cả hai người đều thấy). Tiếp tục?' : 'Dữ liệu mẫu sẽ THAY THẾ toàn bộ dữ liệu hiện tại. Tiếp tục?';
   if ((S.transactions.length || cloudOn()) && !confirm(warn)) return;
@@ -1010,16 +1021,16 @@ const ACTIONS = {
   'add-tx': () => txModal(),
   'edit-tx': id => txModal({ ...findIn(S.transactions, id) }),
   'del-tx': id => { if (confirm('Xóa giao dịch này?')) { S.transactions = S.transactions.filter(t => t.id !== id); save(); render(); toast('Đã xóa'); } },
-  'export-csv': () => (S.transactions.length ? exportCSV() : toast('Chưa có giao dịch để xuất')),
-  'export-json': () => download(`chung-vi-sao-luu-${today()}.json`, JSON.stringify(S, null, 2), 'application/json'),
-  'import-json': () => $('#importFile').click(),
-  'load-sample': loadSample,
-  reset: () => {
+  'export-csv': ownerOnly(() => (S.transactions.length ? exportCSV() : toast('Chưa có giao dịch để xuất'))),
+  'export-json': ownerOnly(() => download(`chung-vi-sao-luu-${today()}.json`, JSON.stringify(S, null, 2), 'application/json')),
+  'import-json': ownerOnly(() => $('#importFile').click()),
+  'load-sample': ownerOnly(loadSample),
+  reset: ownerOnly(() => {
     const msg = cloudOn() ? 'Xóa TOÀN BỘ dữ liệu, KỂ CẢ trên đám mây (người ấy cũng sẽ mất dữ liệu)? Thao tác không thể hoàn tác.' : 'Xóa TOÀN BỘ dữ liệu trên thiết bị này? Thao tác không thể hoàn tác.';
     if (!confirm(msg)) return;
     const keepUi = { me: S.ui.me, cloudUid: S.ui.cloudUid };
     S = defaultState(); Object.assign(S.ui, keepUi); save(); render(); onboarding();
-  },
+  }),
   'add-goal': () => goalModal(),
   'edit-goal': id => goalModal(findIn(S.goals, id)),
   'del-goal': id => { if (confirm('Xóa mục tiêu và toàn bộ lịch sử góp?')) { S.goals = S.goals.filter(g => g.id !== id); save(); render(); } },

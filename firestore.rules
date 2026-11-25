@@ -24,11 +24,20 @@ service cloud.firestore {
     }
 
     match /households/{hid} {
-      allow create: if signedIn() && request.resource.data.members == [request.auth.uid];
-      allow read, delete: if signedIn() && request.auth.uid in resource.data.members;
+      allow create: if signedIn()
+        && request.resource.data.members == [request.auth.uid]
+        && request.resource.data.owner == request.auth.uid;
+      allow read: if signedIn() && request.auth.uid in resource.data.members;
+      // chỉ chủ sổ (người tạo) được xóa sổ
+      allow delete: if signedIn() && request.auth.uid == resource.data.owner;
       allow update: if signedIn() && (
-        // thành viên được sửa dữ liệu
-        request.auth.uid in resource.data.members
+        // chủ sổ: sửa mọi thứ, trừ chuyển quyền chủ sổ
+        (request.auth.uid == resource.data.owner
+          && request.resource.data.owner == resource.data.owner)
+        // thành viên: sửa dữ liệu chi tiêu, KHÔNG đụng tới thông tin quản trị của sổ
+        || (request.auth.uid in resource.data.members
+          && !request.resource.data.diff(resource.data).affectedKeys()
+               .hasAny(['owner', 'ownerEmail', 'members', 'inviteCode', 'createdAt']))
         // người có mã mời chỉ được tự thêm CHÍNH MÌNH vào members (tối đa 4 người)
         || (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['members'])
             && request.resource.data.members.hasAll(resource.data.members)
